@@ -4,24 +4,28 @@ const jwt = require('jsonwebtoken')
 const cookie = require('cookie-parser')
 
 
-async function registerStudent(req,res) {
+async function registerStudent(req, res) {
     try {
-        const {name,email,password} = req.body
-        const hashPassword =await bcrypt.hash(password,10)
-        const register =await authSchema.create({
+        const { name, email, password } = req.body
+        const hashPassword = await bcrypt.hash(password, 10)
+        const register = await authSchema.create({
             name,
             email,
-            password:hashPassword
+            password: hashPassword
         })
-        res.status(201).json({message:'sucessfully registered',Data:register})
+        res.status(201).json({ message: 'sucessfully registered', Data: register })
     } catch (error) {
-        res.status(500).json({message:error.message})
+        res.status(500).json({ message: error.message })
     }
-    
+
 }
 async function loginStudent(req, res) {
     try {
         const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
 
         const student = await authSchema.findOne({ email });
         if (!student) {
@@ -33,30 +37,32 @@ async function loginStudent(req, res) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-   
         const payload = {
             id: student._id,
             email: student.email,
-            name: student.name
+            name: student.name,
+            role: student.role
         };
-
-        const token = jwt.sign(payload, 'abcdef1234', {
+console.log('controller payload', payload);
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: '1h'
         });
+        console.log('controller middleware token', token);
 
-       const response = res.cookie('securetoken', token, {
+        res.cookie('securetoken', token, {
             httpOnly: true,
-            maxAge: 60 * 60 * 1000 
+            // secure: true,
+            sameSite: 'strict',
+            maxAge: 60 * 60 * 1000
         });
-    
-   
+
         res.status(200).json({
             message: "Successfully logged in",
             data: {
                 id: student._id,
                 name: student.name,
                 email: student.email
-            },
+             },
             token
         });
 
@@ -65,4 +71,4 @@ async function loginStudent(req, res) {
     }
 }
 
-module.exports = {registerStudent,loginStudent}
+module.exports = { registerStudent, loginStudent }
