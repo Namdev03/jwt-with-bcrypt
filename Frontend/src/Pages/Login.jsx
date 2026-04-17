@@ -14,7 +14,8 @@ export default function AuthForm() {
         const response = await AxiosInstance.post("/student/login", payload);
         const data = response.data;
         console.log('data is',data);
-        
+        const store = localStorage.setItem("token", data.token);
+        const storesatus = localStorage.setItem("isLoggedIn", 'hellow');
         alert("Login successful! Please log in.");
         window.location.href = "/home";
     } catch (error) {

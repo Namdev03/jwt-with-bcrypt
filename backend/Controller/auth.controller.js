@@ -1,6 +1,8 @@
 const authSchema = require('../Model/Auth.Model')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const cookie = require('cookie-parser')
+
 
 async function registerStudent(req,res) {
     try {
@@ -17,30 +19,49 @@ async function registerStudent(req,res) {
     }
     
 }
-async function loginStudent(req,res) {
+async function loginStudent(req, res) {
     try {
-        const {email,password} = req.body
-        const findstudentbyemail = await authSchema.findOne({email})
-        if(!findstudentbyemail) {
-            return res.status(404).json({message:'email not found'})
+        const { email, password } = req.body;
+
+        const student = await authSchema.findOne({ email });
+        if (!student) {
+            return res.status(404).json({ message: 'Email not found' });
         }
-        const comparepassword = await bcrypt.compare(password,findstudentbyemail.password)
-        if (!comparepassword) {
-            return res.status(404).json({message:"email & pasword not found"})
+
+        const isMatch = await bcrypt.compare(password, student.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
-        const tosend ={
-            name:findstudentbyemail.name,
-            email:findstudentbyemail.email,
-            password:findstudentbyemail.password
-        }
-        const jwtToken = await jwt.sign(tosend,process.env.SECRATE_KEY)
+
+   
+        const payload = {
+            id: student._id,
+            email: student.email,
+            name: student.name
+        };
+
+        const token = jwt.sign(payload, 'abcdef1234', {
+            expiresIn: '1h'
+        });
+
+       const response = res.cookie('securetoken', token, {
+            httpOnly: true,
+            maxAge: 60 * 60 * 1000 
+        });
+    
+   
         res.status(200).json({
-            message:"sucessfully login",
-            Data:findstudentbyemail,
-            token: jwtToken
-        })
+            message: "Successfully logged in",
+            data: {
+                id: student._id,
+                name: student.name,
+                email: student.email
+            },
+            token
+        });
+
     } catch (error) {
-        res.status(500).json({message:error.message})
+        res.status(500).json({ message: error.message });
     }
 }
 
